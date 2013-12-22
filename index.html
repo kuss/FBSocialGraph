@@ -6,7 +6,7 @@
         <script type = "text/javascript" src="js/sigma.min.js"></script>
         <script type = "text/javascript" src="js/sigma.forceatlas2.js"></script>
         <script type = "text/javascript" src="js/sigma.fisheye.js"></script>
-        <script type = "text/javascript" src="js/main.js"></script>
+        <script type = "text/javascript" src="js/main2.js"></script>
         <title> Facebook Social Graph </title>
     </head>
     <body>
@@ -21,38 +21,8 @@
               xfbml      : true 
             });
 
-            FB.login(function(response) {
-              if (response.authResponse) {          
-                FB.api('/me/friends', function(response) {
-                  if (response.data) {
-                    numFriends = response.data.length;
-
-                    // Make Person Data
-                    $.each(response.data, function(index, friend) {
-                      Friends[friend.id] = {'name': friend.name, 'numMutuals': 0, 'mutuals': []};
-                    });
-
-                    // Make Mutual Friends Data
-                    $.each(response.data, function(index, friend) {
-                      FB.api('/me/mutualfriends/'+friend.id, function(response2) {
-                        if (response2.data) {
-                          Friends[friend.id]['numMutuals'] = response2.data.length;
-                          Friends[friend.id]['mutuals'] = response2.data;
-                        }
-                      });
-                    });
-
-                    Main();
-                  }       
-                  else {
-                    console.log(response);
-                  }
-                });
-              }
-              else {
-                console.log(response);
-              }
-            });
+            Program.Initialize();
+            Program.Progress();
           };
 
           (function(d, debug){

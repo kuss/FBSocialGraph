@@ -1,93 +1,124 @@
-function Program() {
-	// Progress variable
-	var status = 0;	
-	var error_code = 0;
-	var callback_list = [FBLogin, GetFriendList, GetMutualFriendList, InitGraph, ClusterGraph, DrawGraph];
+var Program = {
+	Initialize: function() {
+		// Progress variable
+		this.status = 0;	
+		this.error_code = 0;
+		this.cb_list = [
+			this.FBLogin, 
+			this.GetFriendList,
+			this.GetMutualFriendList,
+			this.InitGraph,
+			this.ClusterGraph,
+			this.DrawGraph,
+			this.End
+			];
 
-	// FB Data
-	var Friends = [];
+		// FB Data
+		this.Friends = [];
+		this.nFriends = 0;
 
-	// Clustering
-	var cluster_number = 5;
-	var Clusters = [];
-	
-	// Sigma.js
-	var sigma_instance;
+		// FB Progress
+		this.MutualProgress = 0;
 
-	function Progress() {
-		FBLogin();
+		// Clustering
+		this.cluster_number = 5;
+		this.Clusters = [];
+		
+		// Sigma.js
+		this.sigma_instance;
 
-		GetFriendList();
+		FB.data = {};
+	},
 
-		GetMutualFriendList();
+	Progress: function() {
+		this.FBLogin();	
+	},
 
-		InitGraph();
+	ProgressCallback: function() {
+		if (Program.status == -1) Program.Error();
+		else (Program.cb_list[Program.status])();
+	},
 
-		ClusterGraph();
+	Error: function() {
+		alert('error_code: ' + Program.error_code);
+	},
 
-		DrawGraph();
-	}
-	
-	var FBLogin = function() {
+	End: function() {
+	},
+
+	FBLogin: function() {
 		FB.login(function (response) {
 			if (response.authResponse) {
-				status = 1;
+				Program.status = 1;
+				Program.ProgressCallback();
 			}
 			else {
-				status = -1;
-				error_code = -100; 
+				Program.status = -1;
+				Program.error_code = -100; 
+				Program.ProgressCallback();
 			}
 		});
-	};
+	},
 
-	var GetFriendList = function() {
+	GetFriendList: function() {
 		FB.api('/me/friends', function(response) {
 			if (response.data) {
 				numFriends = response.data.length;
 				$.each(response.data, function(index, friend) {
-					Friends[friend.id] = {
+					Program.Friends[friend.id] = {
 						'id': friend.id,
 						'name': friend.name,
 						'numMutuals': 0,
 						'mutuals': []
 					};
+					++Program.nFriends;
 				});
 
-				status = 2;
+				Program.status = 2;
+				Program.ProgressCallback();
 			}
 			else {
-				status = -1;
-				error_code = -101;
+				Program.status = -1;
+				Program.error_code = -101;
+				Program.ProgressCallback();
 			}
 		});
-	};	
+	},	
 
-	var GetMutualFriendList = function() {
+	GetMutualFriendList: function() {
 		var success = true;
-		for (var friend in Friends) {
-			FB.api('/me/mutualfriends/' + friend.id, function(response) {
+		var fbfunction = function(friend) {
+			FB.api('/me/mutualfriends/' + friend, function(response) {
 				if (response.data) {
-					Friends[friend.id]['numMutuals'] = response.data.length;
-					Friends[friend.id]['mutuals'] = response.data;
+					Program.Friends[friend]['numMutuals'] = response.data.length;
+					Program.Friends[friend]['mutuals'] = response.data;
+					Program.GetMutualListCallback();
 				}
 				else {
-					success = false;
-					break;
+					Program.status = -1;
+					Program.error_code = -102;
+					Program.Error();
 				}
 			});
+		};
+		for (var friend in Program.Friends) {
+			(fbfunction)(friend);
 		}
+	},
 
-		if (success) {
-			status = 3;	
+	GetMutualListCallback: function() {
+		++Program.MutualProgress;
+		if (Program.status == -1) {
+			return;
 		}
-		else {
-			status = -1;
-			error_code = -102;
+		if (Program.MutualProgress == Program.nFriends) {
+			Program.status = 3;
+			Program.ProgressCallback();
 		}
-	};
+	},
 
-	var InitGraph = function() {
-		sigma_instance = sigma.init(
+	InitGraph: function() {
+		Program.sigma_instance = sigma.init(
 			document.getElementById('social-graph')).drawingProperties({
 				defaultLabelColor: '#fff',
 				defaultLabelSize: 14,
@@ -101,11 +132,15 @@ function Program() {
 			minEdgeSize: 1,
 			maxEdgeSize: 1,
 		});
-	};
+		
+		Program.status = 4;
+		Program.ProgressCallback();
+	},
 
-	var ClusterGraph = function() {
-		for(i = 0; i < cluster_number; i++){
-			Clusters.push({
+	ClusterGraph: function() {
+		
+		for(i = 0; i < Program.cluster_number; i++){
+			Program.Clusters.push({
 				'id': i,
 				'nodes': [],
 				'color': 'rgb('+Math.round(Math.random()*256)+','+
@@ -114,29 +149,35 @@ function Program() {
 			});
 		}
 
-		for (friend in Friends) {
-			var cluster = Clusters[(Math.random()*cluster_number)|0];
+		for (friend in Program.Friends) {
+			var cluster = Program.Clusters[(Math.random()*Program.cluster_number)|0];
 			// TODO: not randomly select cluster
-			sigma_instance.addNode(friend, {
+			Program.sigma_instance.addNode(friend, {
 				'x': Math.random(),
 				'y': Math.random(),
-				'size': 0.5 + 0.05 * Friends[friend]['numMutuals'],
+				'size': 0.5 + 0.05 * Program.Friends[friend]['numMutuals'],
 				'color': cluster['color'],
 				'cluster': cluster['id'],
-				'label': Friends[friend]['name']
+				'label': Program.Friends[friend]['name']
 			});
 			cluster.nodes.push('n'+i);
 		}
 
 		var numEdge = 0;
-		for (friend in Friends) {
-			for (mutual in Friends[friend]['mutuals']) {
-				sigma_instance.addEdge(numEdge++, friend, Friends[friend]['mutuals'][mutual]["id"]);
+		for (friend in Program.Friends) {
+			for (mutual in Program.Friends[friend]['mutuals']) {
+				Program.sigma_instance.addEdge(numEdge++, friend, Program.Friends[friend]['mutuals'][mutual]["id"]);
 			}
 		}
-	};	
+		
+		Program.status = 5;
+		Program.ProgressCallback();
+	},	
 
-	var DrawGraph = function() {
-		sigma_instance.draw();	
-	};	
+	DrawGraph: function() {
+		Program.sigma_instance.draw();	
+		
+		Program.status = 6;
+		Program.ProgressCallback();
+	}	
 }
