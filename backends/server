@@ -1,0 +1,2 @@
+python contrib/community/mqmain.py &
+npm start
