@@ -15,7 +15,7 @@ var Program = {
 			];
 
 		// FB Data
-		this.Friends = [];
+		this.Friends = {};
 		this.nFriends = 0;
 
 		// FB Progress
@@ -27,8 +27,6 @@ var Program = {
 		
 		// Sigma.js
 		this.sigma_instance;
-
-		FB.data = {};
 	},
 
 	Progress: function() {
@@ -36,6 +34,7 @@ var Program = {
 	},
 
 	ProgressCallback: function() {
+		console.log(Program.status);
 		if (Program.status == -1) Program.Error();
 		else (Program.cb_list[Program.status])();
 	},
@@ -67,7 +66,6 @@ var Program = {
 				numFriends = response.data.length;
 				$.each(response.data, function(index, friend) {
 					Program.Friends[friend.id] = {
-						'id': friend.id,
 						'name': friend.name,
 						'numMutuals': 0,
 						'mutuals': []
@@ -92,7 +90,9 @@ var Program = {
 			FB.api('/me/mutualfriends/' + friend, function(response) {
 				if (response.data) {
 					Program.Friends[friend]['numMutuals'] = response.data.length;
-					Program.Friends[friend]['mutuals'] = response.data;
+					for (var person in response.data) {
+						Program.Friends[friend]['mutuals'].push(response.data[person]["id"]);
+					}
 					Program.GetMutualListCallback();
 				}
 				else {
@@ -102,8 +102,22 @@ var Program = {
 				}
 			});
 		};
+
+		// minimize fb api when debugging
+		var max_debug_friend = 10;
+		var debug_friend = 0;
+		var DEBUG = true;
+		if (DEBUG) {
+			Program.nFriends = max_debug_friend;
+		}
+
 		for (var friend in Program.Friends) {
 			(fbfunction)(friend);
+
+			if (DEBUG) {
+				++debug_friend;
+				if (debug_friend >= max_debug_friend) break;
+			}
 		}
 	},
 
@@ -139,7 +153,6 @@ var Program = {
 	},
 
 	ClusterGraph: function() {
-		
 		for(i = 0; i < Program.cluster_number; i++){
 			Program.Clusters.push({
 				'id': i,
@@ -167,7 +180,7 @@ var Program = {
 		var numEdge = 0;
 		for (friend in Program.Friends) {
 			for (mutual in Program.Friends[friend]['mutuals']) {
-				Program.sigma_instance.addEdge(numEdge++, friend, Program.Friends[friend]['mutuals'][mutual]["id"]);
+				Program.sigma_instance.addEdge(numEdge++, friend, Program.Friends[friend]['mutuals'][mutual]);
 			}
 		}
 		
@@ -178,11 +191,12 @@ var Program = {
 	ClusterGraphFromServer: function() {
 		$.ajax({
 			type: "POST",
-			url: "/cluster/",
+			url: "/cluster",
 			data: Program.Friends,
+			dataType: "json",
 			success: function(data) {
 				// addCluster
-				for (var i=0;i<int(data["cluster_number"]);i++) {
+				for (var i=0;i<Number(data["num_clusters"]);i++) {
 					Program.Clusters.push({
 						'id': i,
 						'nodes': [],
@@ -193,24 +207,25 @@ var Program = {
 				}
 
 				// addNode
-				for (friend_id in data["list"]) {
-					var cluster_id = int(data[friend_id]);
-					Program.Friends[friend_id] = cluster_id;
-					Program.sigma_instance.addNode(friend_id, {
-						'x': Math.random(),
-						'y': Math.random(),
-						'size': 0.5 + 0.05 * Program.Friends[friend_id]['numMutuals'],
-						'color': Program.Clusters[cluster_id]['color'],
-						'cluster': cluster_id,
-						'label': Program.Friends[friend]['name']
-					});
+				for (cluster_id in data["list"]) {
+					for (friend in data["list"][cluster_id]) {
+						var friend_id = Number(data["list"][cluster_id][friend]);
+						Program.sigma_instance.addNode(friend_id, {
+							'x': Math.random(),
+							'y': Math.random(),
+							'size': 0.5 + 0.05 * Program.Friends[friend_id]['numMutuals'],
+							'color': Program.Clusters[cluster_id]['color'],
+							'cluster': cluster_id,
+							'label': Program.Friends[friend_id]['name']
+						});
+					}
 				}
 
 				// addEdge
 				var numEdge = 0;
 				for (friend in Program.Friends) {
 					for (mutual in Program.Friends[friend]['mutuals']) {
-						Program.sigma_instance.addEdge(numEdge++, friend, Program.Friends[friend]['mutuals'][mutual]["id"]);
+						Program.sigma_instance.addEdge(numEdge++, friend, Program.Friends[friend]['mutuals'][mutual]);
 					}
 				}
 				Program.status = 5;

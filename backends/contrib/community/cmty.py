@@ -7,7 +7,8 @@ import sys
 
 def buildG(G, graph):
     for edge in graph:
-        G.add_edge(int(edge[0]), int(edge[1]), 1)
+        for edge2 in graph[edge]:
+            G.add_edge(edge, edge2, weight=float(1))
 
 #this method just reads the graph structure from the file
 def buildGFromFile(G, file_, delimiter_):
@@ -47,12 +48,14 @@ def _GirvanNewmanGetModularity(G, deg_, m_):
     comps = nx.connected_components(G)    #list of components    
     print 'no of comp: %d' % len(comps)
     Mod = 0    #Modularity of a given partitionning
+
+    node_list = G.nodes()
     for c in comps:
         EWC = 0    #no of edges within a community
         RE = 0    #no of random edges
         for u in c:
-            EWC += New_deg[u]
-            RE += deg_[u]        #count the probability of a random edge
+            EWC += New_deg[node_list.index(u)]
+            RE += deg_[node_list.index(u)]        #count the probability of a random edge
         Mod += ( float(EWC) - float(RE*RE)/float(2*m_) )
     Mod = Mod/float(2*m_)
     #print "Modularity: %f" % Mod
@@ -73,24 +76,33 @@ def runGirvanNewman(G, Orig_deg, m_):
     #let's find the best split of the graph
     BestQ = 0.0
     Q = 0.0
+    print "runGirvanNewman"
     while True:    
         CmtyGirvanNewmanStep(G)
         Q = _GirvanNewmanGetModularity(G, Orig_deg, m_);
         print "current modularity: %f" % Q
+        if len(nx.connected_components(G)) >= 10:
+            break;
         if Q > BestQ:
             BestQ = Q
             Bestcomps = nx.connected_components(G)    #Best Split
-            print "comps:"
-            print Bestcomps
+ #           print "comps:"
+ #           print Bestcomps
         if G.number_of_edges() == 0:
             break
     if BestQ > 0.0:
-        print "Best Q: %f" % BestQ
-        print Bestcomps
+#        print "Best Q: %f" % BestQ
+#        print Bestcomps
+        result_data = {};
+        result_data['num_clusters'] = len(Bestcomps)
+        result_data['list'] = Bestcomps
+        return result_data
     else:
-        print "Best Q: %f" % BestQ
-
-    return Bestcomps
+#        print "Best Q: %f" % BestQ
+        result_data = {};
+        result_data['num_clusters'] = len(nx.connected_components(G))
+        result_data['list'] = nx.connected_components(G)
+        return result_data
 
 def run(graph):
     G = nx.Graph()
@@ -138,5 +150,5 @@ def main(argv):
     #run Newman alg
     runGirvanNewman(G, Orig_deg, m_)
 
-if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+#if __name__ == "__main__":
+#    sys.exit(main(sys.argv))
