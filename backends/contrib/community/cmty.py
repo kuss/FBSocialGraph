@@ -81,11 +81,6 @@ def runGirvanNewman(G, Orig_deg, m_):
     Q = 0.0
     print "runGirvanNewman"
     while True:    
-        comps = nx.connected_components(G)    #list of components    
-        f = open('log.txt','a')
-        f.write(str(comps))
-        f.write('\n');
-        f.close()
         CmtyGirvanNewmanStep(G)
         Q = _GirvanNewmanGetModularity(G, Orig_deg, m_);
         print "current modularity: %f" % Q

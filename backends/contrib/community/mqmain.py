@@ -5,12 +5,6 @@ import gevent
 
 class ServerRPC(object):
     def run(self, graph):
-        f = open('log.txt','a')
-        f.write(str(graph))
-        f.write('\n')
-        f.write(str(json.loads(graph)))
-        f.write('\n')
-        f.close()
         result = cmty.run(json.loads(graph))
         return json.dumps(result)
 

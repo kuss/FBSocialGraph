@@ -106,7 +106,7 @@ var Program = {
 		// minimize fb api when debugging
 		var max_debug_friend = 10;
 		var debug_friend = 0;
-		var DEBUG = true;
+		var DEBUG = true; 
 		if (DEBUG) {
 			Program.nFriends = max_debug_friend;
 		}
