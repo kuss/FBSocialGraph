@@ -35,7 +35,6 @@ http.createServer(function(req, res) {
 				for (var row in req_data) {
 					if (row.split(/\[|\]/)[1] == 'mutuals') res_data[row.split(/\[|\]/)[0]] = req_data[row];
 				}
-				console.log(res_data);
 				
 				var client = new zerorpc.Client();
 				client.connect("tcp://127.0.0.1:14242");

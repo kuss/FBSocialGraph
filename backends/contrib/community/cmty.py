@@ -7,8 +7,11 @@ import sys
 
 def buildG(G, graph):
     for edge in graph:
-        for edge2 in graph[edge]:
-            G.add_edge(edge, edge2, weight=float(1))
+        if isinstance(graph[edge], list):
+            for edge2 in graph[edge]:
+                G.add_edge(int(edge), int(edge2), weight=float(1))
+        else:
+            G.add_edge(int(edge), int(graph[edge]), weight=float(1))
 
 #this method just reads the graph structure from the file
 def buildGFromFile(G, file_, delimiter_):
@@ -78,10 +81,15 @@ def runGirvanNewman(G, Orig_deg, m_):
     Q = 0.0
     print "runGirvanNewman"
     while True:    
+        comps = nx.connected_components(G)    #list of components    
+        f = open('log.txt','a')
+        f.write(str(comps))
+        f.write('\n');
+        f.close()
         CmtyGirvanNewmanStep(G)
         Q = _GirvanNewmanGetModularity(G, Orig_deg, m_);
         print "current modularity: %f" % Q
-        if len(nx.connected_components(G)) >= 10:
+        if len(nx.connected_components(G)) >= 10 or Q >= 0.5:
             break;
         if Q > BestQ:
             BestQ = Q
@@ -92,7 +100,6 @@ def runGirvanNewman(G, Orig_deg, m_):
             break
     if BestQ > 0.0:
 #        print "Best Q: %f" % BestQ
-#        print Bestcomps
         result_data = {};
         result_data['num_clusters'] = len(Bestcomps)
         result_data['list'] = Bestcomps

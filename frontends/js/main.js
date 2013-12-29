@@ -210,6 +210,7 @@ var Program = {
 				for (cluster_id in data["list"]) {
 					for (friend in data["list"][cluster_id]) {
 						var friend_id = Number(data["list"][cluster_id][friend]);
+						console.log(friend_id);
 						Program.sigma_instance.addNode(friend_id, {
 							'x': Math.random(),
 							'y': Math.random(),
@@ -252,6 +253,7 @@ var Program = {
 	    sigInst.desactivateFishEye().draw(2,2,2);
 	}, true);
 	sigInst.startForceAtlas2();*/
+		Program.sigma_instance.startForceAtlas2();
 		
 		Program.status = 6;
 		Program.ProgressCallback();
